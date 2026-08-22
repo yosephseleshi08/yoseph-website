@@ -572,63 +572,48 @@ def dashboard():
 @admin_required
 def editor():
     return render_template('editor.html',
-                         theme=data['theme'],
-                         restaurant=data['restaurant'],
-                         home=data['home'],
-                         about=data['about'],
-                         contact=data['contact'],
-                         footer=data['footer'],
-                         menu=data['menu'],
-                         testimonials=data['testimonials'],
-                         online_ordering=data['online_ordering'],
-                         gallery=data['gallery'],
-                         events=data['events'],
-                         analytics=data['analytics'])
+        theme=data['theme'],
+        restaurant=data['restaurant'],
+        home=data['home'],
+        about=data['about'],
+        contact=data['contact'],
+        footer=data['footer'],
+        menu=data['menu'],
+        testimonials=data['testimonials'],
+        online_ordering=data['online_ordering'],
+        gallery=data['gallery'],
+        events=data['events'],
+        analytics=data['analytics'])
 
 
 @app.route('/admin/settings', methods=['GET', 'POST'])
 @admin_required
 def admin_settings():
     if request.method == 'POST':
-        set_setting('smtp_server', request.form.get('smtp_server', ''))
-        set_setting('smtp_port', request.form.get('smtp_port', '587'))
-        set_setting('smtp_username', request.form.get('smtp_username', ''))
-        set_setting('smtp_password', request.form.get('smtp_password', ''))
-        set_setting('smtp_use_tls', 'true' if request.form.get('smtp_use_tls') else 'false')
-        set_setting('notification_email', request.form.get('notification_email', ''))
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_password')
+        user = User.query.get(session['user_id'])
+        
+        current_password = request.form.get('current_password', '')
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
         if new_password:
-            if new_password != confirm_password:
+            if len(new_password) < 8:
+                flash('Password must be at least 8 characters', 'error')
+            elif new_password != confirm_password:
                 flash('New passwords do not match', 'error')
+            elif not check_password_hash(user.password_hash, current_password):
+                flash('Current password is incorrect', 'error')
             else:
-                conn = get_db()
-                user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
-                if not check_password_hash(user['password_hash'], current_password):
-                    flash('Current password is incorrect', 'error')
-                else:
-                    conn.execute(
-                        "UPDATE users SET password_hash = ? WHERE id = ?",
-                        (generate_password_hash(new_password), session['user_id'])
-                    )
-                    conn.commit()
-                    flash('Password updated successfully')
-                conn.close()
+                user.password_hash = generate_password_hash(new_password)
+                db.session.commit()
+                flash('Password updated successfully!', 'success')
+        
         return redirect(url_for('admin_settings'))
-    settings = {
-        'smtp_server': get_setting('smtp_server'),
-        'smtp_port': get_setting('smtp_port'),
-        'smtp_username': get_setting('smtp_username'),
-        'smtp_password': get_setting('smtp_password'),
-        'smtp_use_tls': get_setting('smtp_use_tls', 'true') == 'true',
-        'notification_email': get_setting('notification_email')
-    }
+    
     return render_template('admin_settings.html',
-                         theme=data['theme'],
-                         restaurant=data['restaurant'],
-                         settings=settings)
-
+        theme=data['theme'],
+        restaurant=data['restaurant'],
+        settings={})
 
 @app.route('/api/upload_image', methods=['POST'])
 @admin_required
