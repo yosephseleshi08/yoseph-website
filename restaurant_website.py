@@ -324,7 +324,6 @@ def init_db():
     """Initialize database - creates tables and admin user"""
     db.create_all()
     if User.query.count() == 0:
-        # Use fixed password for simplicity
         admin = User(username='admin', password_hash=generate_password_hash('admin123'))
         db.session.add(admin)
         db.session.commit()
@@ -366,6 +365,16 @@ def admin_required(f):
         return f(*args, **kwargs)
 
     return decorated
+
+
+@app.context_processor
+def inject_globals():
+    return {
+        'restaurant': data['restaurant'],
+        'theme': data['theme'],
+        'current_year': datetime.now().year,
+        'csrf_token': lambda: ''  # Empty CSRF token
+    }
 
 
 # ========================================
@@ -494,16 +503,6 @@ def dashboard():
     return render_template('dashboard.html',
                            theme=data['theme'], restaurant=data['restaurant'],
                            analytics=analytics, reservations=reservations)
-
-
-@app.context_processor
-def inject_globals():
-    return {
-        'restaurant': data['restaurant'],
-        'theme': data['theme'],
-        'current_year': datetime.now().year,
-        'csrf_token': lambda: ''  # Empty CSRF token
-    }
 
 
 @app.route('/editor')
