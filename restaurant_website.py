@@ -598,6 +598,10 @@ def update_about():
     save_data(data)
     return jsonify({'success': True})
 
+@app.route('/test')
+def test():
+    return "✅ THIS IS THE NEW FILE - change_password route exists"
+
 
 @app.route('/api/update_testimonials', methods=['POST'])
 @admin_required
