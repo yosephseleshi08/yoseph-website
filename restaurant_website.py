@@ -772,6 +772,36 @@ def update_contact():
     save_data(data)
     return jsonify({'success': True})
 
+@app.route('/admin/settings', methods=['GET', 'POST'])
+@admin_required
+def admin_settings():
+    if request.method == 'POST':
+        # Get current user
+        user = User.query.get(session['user_id'])
+        
+        current_password = request.form.get('current_password', '')
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        if new_password:
+            if len(new_password) < 8:
+                flash('Password must be at least 8 characters', 'error')
+            elif new_password != confirm_password:
+                flash('New passwords do not match', 'error')
+            elif not check_password_hash(user.password_hash, current_password):
+                flash('Current password is incorrect', 'error')
+            else:
+                # Update password
+                user.password_hash = generate_password_hash(new_password)
+                db.session.commit()
+                flash('Password updated successfully!', 'success')
+                return redirect(url_for('admin_settings'))
+        
+        return redirect(url_for('admin_settings'))
+    
+    return render_template('admin_settings.html',
+        theme=data['theme'],
+        restaurant=data['restaurant'])
 
 @app.route('/api/update_footer', methods=['POST'])
 @admin_required
